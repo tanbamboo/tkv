@@ -89,4 +89,5 @@ public class Record {
 	public void setNexKey(String nextKey) {
 		this.nextKey = nextKey;
 	}
+	
 }

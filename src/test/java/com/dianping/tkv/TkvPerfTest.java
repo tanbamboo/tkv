@@ -12,17 +12,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.dianping.tkv.TkvImpl;
-
 /**
  * @author sean.wang
- * @since Nov 17, 2011
+ * @since Feb 20, 2012
  */
 public class TkvPerfTest {
 
-	TkvImpl fkv;
+	private TkvImpl fkv;
 
-	File dbFile;
+	private File dbFile;
 
 	/**
 	 * @throws java.lang.Exception
@@ -91,11 +89,11 @@ public class TkvPerfTest {
 	public void testGetTagRecordPerf() throws IOException {
 		String value = "0123456789";
 		for (int i = 0; i < perfTimes; i++) {
-			fkv.put("" + (10000000 + i), value.getBytes(), "pet");
+			fkv.put("" + (10000000 + i), value.getBytes(), "pet" + i % 100);
 		}
 		long start = System.currentTimeMillis();
 		for (int i = 0; i < perfTimes; i++) {
-			fkv.getRecord("pet", "" + (10000000 + i));
+			fkv.getRecord("pet" + i % 100, "" + (10000000 + i));
 		}
 		System.out.println("testGetTagRecordPerf:" + (System.currentTimeMillis() - start));
 	}

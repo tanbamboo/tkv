@@ -13,40 +13,44 @@ import java.io.RandomAccessFile;
  */
 public class TkvFileStore implements TkvStore {
 
-	private RandomAccessFile access;
+	private RandomAccessFile writeRAF;
+
+	private RandomAccessFile readRAF;
 
 	public TkvFileStore(File dbFile) throws IOException {
-		access = new RandomAccessFile(dbFile, "rw");
+		writeRAF = new RandomAccessFile(dbFile, "rw");
+		readRAF = new RandomAccessFile(dbFile, "r");
 	}
 
 	@Override
 	public void append(byte b) throws IOException {
-		access.seek(access.length());
-		access.writeByte(b);
+		writeRAF.seek(writeRAF.length());
+		writeRAF.writeByte(b);
 	}
 
 	@Override
 	public void append(byte[] bytes) throws IOException {
-		access.seek(access.length());
-		access.write(bytes);
+		writeRAF.seek(writeRAF.length());
+		writeRAF.write(bytes);
 	}
 
 	@Override
 	public void close() throws IOException {
-		access.close();
+		writeRAF.close();
+		readRAF.close();
 	}
 
 	@Override
 	public byte[] get(int pos, int size) throws IOException {
 		byte[] bytes = new byte[size];
-		access.seek(pos);
-		access.read(bytes);
+		writeRAF.seek(pos);
+		writeRAF.read(bytes);
 		return bytes;
 	}
 
 	@Override
 	public long length() throws IOException {
-		return access.length();
+		return writeRAF.length();
 	}
 
 }
