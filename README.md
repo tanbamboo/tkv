@@ -16,15 +16,15 @@ tkv is a key-value store written in java, it applies to embedded scene.
 	Tkv tkv = new TkvImpl(dbFile); 
 	String key = "01234567"; 
 	String value = "ayellowdog"; 
-        //put key-value with tags
+	//put key-value with tags
 	tkv.put(key, value.getBytes(), "pet", "dog");
-        // get value by key
-        tkv.get(key);
-        // get record by tag and key
-        Record r  = tkv.getRecord("pet", key);
-        // navigate in the same tag
-        Record next = tkv.getRecord("pet", r.getNextKey());
-        Record privious = tkv.getRecord("pet", r.getPriviousKey());
+	// get value by key
+	tkv.get(key);
+	// get record by tag and key
+	Record r  = tkv.getRecord("pet", key);
+	// navigate in the same tag
+	Record next = tkv.getRecord("pet", r.getNextKey());
+	Record privious = tkv.getRecord("pet", r.getPriviousKey());
 
 	tkv.close();
 ```
