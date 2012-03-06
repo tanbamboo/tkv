@@ -6,7 +6,7 @@ tkv is a key-value store written in java, it applies to embedded scene.
 - no in memory value cache
 - every kev-value record associated with multi tags, so each tag associated with a record list order by created time.
 
-## architect
+## architecture
 ![architect](http://ww2.sinaimg.cn/large/648d6e26gw1dqawvzkia7j.jpg "tkv architect")
 
 
