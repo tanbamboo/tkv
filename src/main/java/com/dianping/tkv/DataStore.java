@@ -1,4 +1,4 @@
-package com.dianping.tkv.store;
+package com.dianping.tkv;
 
 import java.io.IOException;
 
@@ -6,10 +6,12 @@ import java.io.IOException;
  * @author sean.wang
  * @since Nov 16, 2011
  */
-public interface TkvStore {
-	byte[] get(int startIndex, int size) throws IOException;
+public interface DataStore {
+	byte[] get(long startIndex, int size) throws IOException;
 
 	void append(byte[] bytes) throws IOException;
+	
+	void append(long offset, byte[] bytes) throws IOException;
 	
 	void append(byte b) throws IOException;
 

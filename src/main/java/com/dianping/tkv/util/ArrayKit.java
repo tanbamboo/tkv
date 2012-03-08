@@ -1,10 +1,15 @@
-package com.dianping.tkv.store.util;
+package com.dianping.tkv.util;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ArrayKit {
 	/**
 	 * An empty immutable <code>String</code> array.
 	 */
 	public static final String[] EMPTY_STRING_ARRAY = new String[0];
+	
+	public static final byte[][] EMPTY_BYTE_ARRAY_ARRAY = new byte[0][0];
 
 	/**
 	 * <p>
@@ -293,6 +298,82 @@ public class ArrayKit {
 
 			return i;
 		}
+	}
+	
+	/**
+	 * <p>
+	 * Splits the provided text into an array, separator specified. This is an
+	 * alternative to using StringTokenizer.
+	 * </p>
+	 * 
+	 * <p>
+	 * The separator is not included in the returned String array. Adjacent
+	 * separators are treated as one separator. For more control over the split
+	 * use the StrTokenizer class.
+	 * </p>
+	 * 
+	 * <p>
+	 * A <code>null</code> input String returns <code>null</code>.
+	 * </p>
+	 * 
+	 * <pre>
+	 * StringUtils.split(null, *)         = null
+	 * StringUtils.split("", *)           = []
+	 * StringUtils.split("a.b.c", '.')    = ["a", "b", "c"]
+	 * StringUtils.split("a..b.c", '.')   = ["a", "b", "c"]
+	 * StringUtils.split("a:b:c", '.')    = ["a:b:c"]
+	 * StringUtils.split("a b c", ' ')    = ["a", "b", "c"]
+	 * </pre>
+	 * 
+	 * @param str
+	 *            the String to parse, may be null
+	 * @param separatorChar
+	 *            the character used as the delimiter
+	 * @return an array of parsed Strings, <code>null</code> if null String
+	 *         input
+	 * @since 2.0
+	 */
+	public static byte[][] split(byte[] str, byte separatorChar) {
+		return splitWorker(str, separatorChar, false);
+	}
+	
+	private static byte[][] splitWorker(byte[] str, byte separatorChar,
+			boolean preserveAllTokens) {
+		// Performance tuned for 2.0 (JDK1.4)
+
+		if (str == null) {
+			return null;
+		}
+		int len = str.length;
+		if (len == 0) {
+			return ArrayKit.EMPTY_BYTE_ARRAY_ARRAY;
+		}
+		List<byte[]> list = new ArrayList<byte[]>();
+		int i = 0, start = 0;
+		boolean match = false;
+		boolean lastMatch = false;
+		while (i < len) {
+			if (str[i] == separatorChar) {
+				if (match || preserveAllTokens) {
+					byte[] tmp = new byte[i - start];
+					System.arraycopy(str, start, tmp, 0, tmp.length);
+					list.add(tmp);
+					match = false;
+					lastMatch = true;
+				}
+				start = ++i;
+				continue;
+			}
+			lastMatch = false;
+			match = true;
+			i++;
+		}
+		if (match || (preserveAllTokens && lastMatch)) {
+			byte[] tmp = new byte[i - start];
+			System.arraycopy(str, start, tmp, 0, tmp.length);
+			list.add(tmp);
+		}
+		return list.toArray(new byte[list.size()][]);
 	}
 
 }

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.dianping.tkv;
+package com.dianping.tkv.local;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,13 +12,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.dianping.tkv.local.LocalImpl;
+
 /**
  * @author sean.wang
  * @since Feb 20, 2012
  */
-public class TkvPerfTest {
+public class LocalImplPerfTest {
 
-	private TkvImpl fkv;
+	private LocalImpl fkv;
 
 	private File dbFile;
 
@@ -43,7 +45,7 @@ public class TkvPerfTest {
 	public void setUp() throws Exception {
 		dbFile = new File("/tmp/fkvtest.db");
 		dbFile.delete();
-		fkv = new TkvImpl(dbFile);
+		fkv = new LocalImpl(dbFile);
 	}
 
 	/**
@@ -58,7 +60,7 @@ public class TkvPerfTest {
 	private int perfTimes = 100000;
 
 	/**
-	 * Test method for {@link com.dianping.tkv.TkvImpl#get(java.lang.String)}.
+	 * Test method for {@link com.dianping.tkv.local.LocalImpl#get(java.lang.String)}.
 	 * 
 	 * @throws IOException
 	 */
@@ -70,6 +72,21 @@ public class TkvPerfTest {
 			fkv.put("" + (10000000 + i), value.getBytes());
 		}
 		System.out.println("testPutDiffKeyWithoutTagsPerf:" + (System.currentTimeMillis() - start));
+	}
+
+	/**
+	 * Test method for {@link com.dianping.tkv.local.LocalImpl#get(java.lang.String)}.
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void testPutDiffKeyWithTagsPerf() throws IOException {
+		String value = "0123456789";
+		long start = System.currentTimeMillis();
+		for (int i = 0; i < perfTimes; i++) {
+			fkv.put("" + (10000000 + i), value.getBytes(), "pet", "dog");
+		}
+		System.out.println("testPutDiffKeyWithTagsPerf:" + (System.currentTimeMillis() - start));
 	}
 
 	@Test
@@ -86,16 +103,29 @@ public class TkvPerfTest {
 	}
 
 	@Test
-	public void testGetTagRecordPerf() throws IOException {
+	public void testGetDiffKeyWithTagsPerf() throws IOException {
 		String value = "0123456789";
 		for (int i = 0; i < perfTimes; i++) {
-			fkv.put("" + (10000000 + i), value.getBytes(), "pet" + i % 100);
+			fkv.put("" + (10000000 + i), value.getBytes(), "pet", "dog");
 		}
 		long start = System.currentTimeMillis();
 		for (int i = 0; i < perfTimes; i++) {
-			fkv.getRecord("pet" + i % 100, "" + (10000000 + i));
+			fkv.get("" + (10000000 + i), "pet");
 		}
-		System.out.println("testGetTagRecordPerf:" + (System.currentTimeMillis() - start));
+		System.out.println("testGetDiffKeyWithTagsPerf:" + (System.currentTimeMillis() - start));
+	}
+
+	@Test
+	public void testGetDiffKeyWithMoreTagsPerf() throws IOException {
+		String value = "0123456789";
+		for (int i = 0; i < perfTimes; i++) {
+			fkv.put("" + (10000000 + i), value.getBytes(), "pet" + i % 100, "dog" + i % 100);
+		}
+		long start = System.currentTimeMillis();
+		for (int i = 0; i < perfTimes; i++) {
+			fkv.getRecord("" + (10000000 + i), "pet" + i % 100);
+		}
+		System.out.println("testGetDiffKeyWithMoreTagsPerf:" + (System.currentTimeMillis() - start));
 	}
 
 }

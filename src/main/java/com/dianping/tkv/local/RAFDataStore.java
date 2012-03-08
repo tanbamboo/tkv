@@ -1,23 +1,25 @@
 /**
  * 
  */
-package com.dianping.tkv.store;
+package com.dianping.tkv.local;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import com.dianping.tkv.DataStore;
+
 /**
  * @author sean.wang
  * @since Nov 16, 2011
  */
-public class TkvFileStore implements TkvStore {
+public class RAFDataStore implements DataStore {
 
 	private RandomAccessFile writeRAF;
 
 	private RandomAccessFile readRAF;
 
-	public TkvFileStore(File dbFile) throws IOException {
+	public RAFDataStore(File dbFile) throws IOException {
 		writeRAF = new RandomAccessFile(dbFile, "rw");
 		readRAF = new RandomAccessFile(dbFile, "r");
 	}
@@ -25,12 +27,17 @@ public class TkvFileStore implements TkvStore {
 	@Override
 	public void append(byte b) throws IOException {
 		writeRAF.seek(writeRAF.length());
-		writeRAF.writeByte(b);
+		writeRAF.write(b);
 	}
 
 	@Override
 	public void append(byte[] bytes) throws IOException {
-		writeRAF.seek(writeRAF.length());
+		this.append(writeRAF.length(), bytes);
+	}
+
+	@Override
+	public void append(long offset, byte[] bytes) throws IOException {
+		writeRAF.seek(offset);
 		writeRAF.write(bytes);
 	}
 
@@ -41,16 +48,16 @@ public class TkvFileStore implements TkvStore {
 	}
 
 	@Override
-	public byte[] get(int pos, int size) throws IOException {
+	public byte[] get(long pos, int size) throws IOException {
 		byte[] bytes = new byte[size];
-		writeRAF.seek(pos);
-		writeRAF.read(bytes);
+		readRAF.seek(pos);
+		readRAF.read(bytes);
 		return bytes;
 	}
 
 	@Override
 	public long length() throws IOException {
-		return writeRAF.length();
+		return readRAF.length();
 	}
 
 }

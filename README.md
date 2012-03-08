@@ -1,16 +1,19 @@
-# tkv
-tkv is a key-value store written in java, it applies to embedded scene.
+## Introduction
+Tkv is a key-value store written in java, it applies to embedded scene.
 
-## feauture
-- read and append only
-- no in memory value cache
-- every kev-value record associated with multi tags, so each tag associated with a record list order by created time.
+## Advantage
+- No in memory value cache.
+- Every record associated with multi tags, so each tag associated with a record list order by created time.
+- support hdfs or local filesystem.
 
-## architecture
+## Weakness
+- Read and append only, no update and delete.
+
+## Architecture
 ![architect](http://ww2.sinaimg.cn/large/648d6e26gw1dqawvzkia7j.jpg "tkv architect")
 
 
-# exmaple
+## Exmaple
 ```java		
 	File dbFile = new File("/tmp/tkvtest.db"); 
 	Tkv tkv = new TkvImpl(dbFile); 
@@ -29,5 +32,5 @@ tkv is a key-value store written in java, it applies to embedded scene.
 	tkv.close();
 ```
 
-# community
+## Feedback
 [http://weibo.com/seanlinwang](weibo.com/seanlinwang)  xailnx@gmail.com

@@ -1,4 +1,4 @@
-package com.dianping.tkv.store.util;
+package com.dianping.tkv.util;
 
 import java.io.IOException;
 import java.io.Writer;

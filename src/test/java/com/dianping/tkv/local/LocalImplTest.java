@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.dianping.tkv;
+package com.dianping.tkv.local;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,13 +14,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.dianping.tkv.Record;
+import com.dianping.tkv.local.LocalImpl;
+
 /**
  * @author sean.wang
  * @since Nov 17, 2011
  */
-public class TkvImplTest {
+public class LocalImplTest {
 
-	TkvImpl tkv;
+	LocalImpl tkv;
 
 	File dbFile;
 
@@ -45,7 +48,7 @@ public class TkvImplTest {
 	public void setUp() throws Exception {
 		dbFile = new File("/tmp/tkvtest.db");
 		dbFile.delete();
-		tkv = new TkvImpl(dbFile);
+		tkv = new LocalImpl(dbFile);
 	}
 
 	/**
@@ -58,7 +61,7 @@ public class TkvImplTest {
 	}
 
 	/**
-	 * Test method for {@link com.dianping.tkv.TkvImpl#get(java.lang.String)}.
+	 * Test method for {@link com.dianping.tkv.local.LocalImpl#get(java.lang.String)}.
 	 * 
 	 * @throws IOException
 	 */
@@ -89,19 +92,19 @@ public class TkvImplTest {
 		String[] tags3 = new String[] { "pet" };
 		tkv.put(key3, value3.getBytes(), tags3);
 
-		Record r = tkv.getRecord("pet", key2);
+		Record r = tkv.getRecord(key2, "pet");
 
-		Record rNext = tkv.getRecord("pet", r.nextKey());
+		Record rNext = tkv.getRecord(r.nextKey(), "pet");
 		Assert.assertEquals(key3, rNext.getKey());
 		Assert.assertEquals(value3, new String(rNext.getValue()));
 
-		Record rPrevious = tkv.getRecord("pet", r.priviousKey());
+		Record rPrevious = tkv.getRecord(r.priviousKey(), "pet");
 		Assert.assertEquals(key, rPrevious.getKey());
 		Assert.assertEquals(value, new String(rPrevious.getValue()));
 	}
 
 	/**
-	 * Test method for {@link com.dianping.tkv.TkvImpl#get(java.lang.String)}.
+	 * Test method for {@link com.dianping.tkv.local.LocalImpl#get(java.lang.String)}.
 	 * 
 	 * @throws IOException
 	 */

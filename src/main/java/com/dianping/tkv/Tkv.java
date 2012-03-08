@@ -14,14 +14,23 @@ import java.io.IOException;
 public interface Tkv {
 
 	/**
-	 * close fkv
+	 * close store
 	 * 
 	 * @throws IOException
 	 */
 	void close() throws IOException;
 
 	/**
-	 * get record by key
+	 * get value by index pos
+	 * 
+	 * @param indexPos
+	 * @return
+	 * @throws IOException
+	 */
+	byte[] get(int indexPos) throws IOException;
+
+	/**
+	 * get value by key
 	 * 
 	 * @param key
 	 * @return
@@ -30,37 +39,58 @@ public interface Tkv {
 	byte[] get(String key) throws IOException;
 
 	/**
-	 * get tag by tag name
+	 * get vlaue by key and tag
 	 * 
 	 * @return
 	 * @throws IOException
 	 */
-	Record getRecord(String tagName, String key) throws IOException;
+	byte[] get(String key, String tag) throws IOException;
 
 	/**
-	 * put record without tags
+	 * get index by index pos
 	 * 
-	 * @param key
-	 * @param value
+	 * @param indexPos
+	 * @return
 	 * @throws IOException
 	 */
+	Meta getIndex(int indexPos) throws IOException;
+
+	/**
+	 * get index by key
+	 * 
+	 * @param key
+	 * @return
+	 * @throws IOException
+	 */
+	Meta getIndex(String key) throws IOException;
+
+	/**
+	 * get index by key and tag
+	 * 
+	 * @param key
+	 * @param tag
+	 * @return
+	 * @throws IOException
+	 */
+	Meta getIndex(String key, String tag) throws IOException;
+
+	/**
+	 * @param key
+	 * @param tag
+	 * @return
+	 * @throws IOException
+	 */
+	Record getRecord(String key, String tag) throws IOException;
+
 	void put(String key, byte[] value) throws IOException;
 
-	/**
-	 * put record with tags
-	 * 
-	 * @param key
-	 * @param value
-	 * @param tags
-	 * @throws IOException
-	 */
 	void put(String key, byte[] value, String... tags) throws IOException;
 
 	/**
 	 * record size
 	 * 
 	 * @return
+	 * @throws IOException
 	 */
-	int size();
-
+	int size() throws IOException;
 }

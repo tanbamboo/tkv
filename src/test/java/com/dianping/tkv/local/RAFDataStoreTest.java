@@ -1,4 +1,4 @@
-package com.dianping.tkv.store;
+package com.dianping.tkv.local;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,13 +10,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.dianping.tkv.TkvImpl;
-import com.dianping.tkv.store.TkvFileStore;
+import com.dianping.tkv.DataStore;
+import com.dianping.tkv.local.RAFDataStore;
+import com.dianping.tkv.local.LocalImpl;
 
-public class TkvFileStoreTest {
+public class RAFDataStoreTest {
 	File dbFile;
-	TkvImpl tkv;
-	private TkvFileStore store;
+	LocalImpl tkv;
+	private RAFDataStore store;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -29,8 +30,8 @@ public class TkvFileStoreTest {
 	@Before
 	public void setUp() throws Exception {
 		dbFile = new File("/tmp/tkvtest.db");
-		tkv = new TkvImpl(dbFile);
-		store = (TkvFileStore) tkv.getStore();
+		tkv = new LocalImpl(dbFile);
+		store = (RAFDataStore) tkv.getStore();
 	}
 
 	@After
@@ -47,7 +48,7 @@ public class TkvFileStoreTest {
 		String[] tags = new String[] { "dog", "pet" };
 		tkv.put(key, value.getBytes(), tags);
 		Assert.assertEquals(4 + 4 + 4 + key.length() + value.length(), +7 + 1, dbFile.length());
-		TkvStore store = tkv.getStore();
+		DataStore store = tkv.getStore();
 		// assert store
 		Assert.assertEquals(key.length(), bytes2Int(store.get(0, 4)));
 		Assert.assertEquals(value.length(), bytes2Int(store.get(4, 4)));

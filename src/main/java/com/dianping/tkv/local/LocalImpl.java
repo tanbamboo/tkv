@@ -1,7 +1,10 @@
 /**
  * 
  */
-package com.dianping.tkv;
+package com.dianping.tkv.local;
+
+import static com.dianping.tkv.util.NumberKit.bytes2Int;
+import static com.dianping.tkv.util.NumberKit.int2Bytes;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,9 +16,11 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.dianping.tkv.store.TkvFileStore;
-import com.dianping.tkv.store.TkvStore;
-import com.dianping.tkv.store.util.StringKit;
+import com.dianping.tkv.DataStore;
+import com.dianping.tkv.Meta;
+import com.dianping.tkv.Record;
+import com.dianping.tkv.Tkv;
+import com.dianping.tkv.util.StringKit;
 
 /**
  * Tagged key-value store implement.
@@ -23,7 +28,7 @@ import com.dianping.tkv.store.util.StringKit;
  * @author sean.wang
  * @since Feb 21, 2012
  */
-public class TkvImpl implements Tkv {
+public class LocalImpl implements Tkv {
 	private static class IndexItem {
 		private int pos;
 
@@ -55,21 +60,17 @@ public class TkvImpl implements Tkv {
 
 	private final Lock readLock = new ReentrantLock();
 
-	private TkvStore store;
+	private DataStore store;
 
 	private Map<String, IndexItem> keyValueIndex;
 
 	private Map<String, List<String>> tagListIndex;
 
-	public TkvImpl(File dbFile) throws IOException {
-		this.store = new TkvFileStore(dbFile);
+	public LocalImpl(File dbFile) throws IOException {
+		this.store = new RAFDataStore(dbFile);
 		this.keyValueIndex = new HashMap<String, IndexItem>();
 		this.tagListIndex = new HashMap<String, List<String>>();
 		deserial();
-	}
-
-	private int bytes2Int(byte[] bytes) {
-		return (bytes[0] & 0xff) << 24 | (bytes[1] & 0xff) << 16 | (bytes[2] & 0xff) << 8 | (bytes[3] & 0xff);
 	}
 
 	@Override
@@ -101,7 +102,7 @@ public class TkvImpl implements Tkv {
 	}
 
 	protected void deserial() throws IOException {
-		TkvStore store = this.store;
+		DataStore store = this.store;
 		int pos = 0;// record position
 		try {
 			writeLock.lock();
@@ -142,31 +143,45 @@ public class TkvImpl implements Tkv {
 
 	@Override
 	public byte[] get(String key) throws IOException {
-		Record r;
-		try {
-			readLock.tryLock();
-			r = getRecord(null, key);
-		} finally {
-			readLock.unlock();
-		}
-		return r.getValue();
-	}
-
-	public TkvStore getStore() {
-		return this.store;
+		return get(key, null);
 	}
 
 	@Override
-	public Record getRecord(String tagName, String key) throws IOException {
+	public byte[] get(String key, String tag) throws IOException {
+		Record r = getRecord(key, tag);
+		return r.getValue();
+	}
+
+	@Override
+	public byte[] get(int indexPos) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Meta getIndex(String key) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Meta getIndex(String key, String tag) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Meta getIndex(int indexPos) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Record getRecord(String key, String tag) throws IOException {
 		Record r = new Record();
 		byte[] body = null;
-		IndexItem indexItem = null;
+		IndexItem indexItem = this.keyValueIndex.get(key);
+		if (indexItem == null) {
+			return null;
+		}
 		try {
-			readLock.tryLock();
-			indexItem = this.keyValueIndex.get(key);
-			if (indexItem == null) {
-				return null;
-			}
+			readLock.lock();
 			body = this.store.get(indexItem.pos, indexItem.bodyLength);
 		} finally {
 			readLock.unlock();
@@ -182,10 +197,10 @@ public class TkvImpl implements Tkv {
 		byte[] valueBuf = new byte[valueLength];
 		System.arraycopy(body, 12 + keyLength, valueBuf, 0, valueLength);
 		r.setValue(valueBuf);
-		if (tagName != null) {
-			Integer pos = indexItem.getTagPos(tagName);
+		if (tag != null) {
+			Integer pos = indexItem.getTagPos(tag);
 			if (pos != null) {
-				List<String> tagList = this.tagListIndex.get(tagName);
+				List<String> tagList = this.tagListIndex.get(tag);
 				String nextKey = pos == tagList.size() - 1 ? null : tagList.get(pos + 1);
 				String priviousKey = pos == 0 ? null : tagList.get(pos - 1);
 				r.setPriviousKey(priviousKey);
@@ -193,6 +208,10 @@ public class TkvImpl implements Tkv {
 			}
 		}
 		return r;
+	}
+
+	public DataStore getStore() {
+		return this.store;
 	}
 
 	/**
@@ -221,15 +240,6 @@ public class TkvImpl implements Tkv {
 		}
 	}
 
-	public byte[] int2Bytes(int num) {
-		byte[] bytes = new byte[4];
-		bytes[0] = (byte) (num >>> 24);
-		bytes[1] = (byte) (num >>> 16);
-		bytes[2] = (byte) (num >>> 8);
-		bytes[3] = (byte) num;
-		return bytes;
-	}
-
 	@Override
 	public void put(String key, byte[] value) throws IOException {
 		put(key, value, (String[]) null);
@@ -237,16 +247,10 @@ public class TkvImpl implements Tkv {
 
 	@Override
 	public void put(String key, byte[] value, String... tags) throws IOException {
-		try {
-			writeLock.lock();
-			Record r = createNewRecord(key, value, tags);
-			r.setPos((int) store.length());
-			storeRecord(r);
-			index(r);
-		} finally {
-			writeLock.unlock();
-		}
-
+		Record r = createNewRecord(key, value, tags);
+		r.setPos((int) store.length());
+		storeRecord(r);
+		index(r);
 	}
 
 	@Override
@@ -265,6 +269,11 @@ public class TkvImpl implements Tkv {
 			bb.put(r.getTagsToString().getBytes());
 		}
 		bb.put((byte) Record.ENDER);
-		this.store.append(bb.array());
+		try {
+			writeLock.lock();
+			this.store.append(bb.array());
+		} finally {
+			writeLock.unlock();
+		}
 	}
 }
