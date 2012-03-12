@@ -241,20 +241,29 @@ public class LocalImpl implements Tkv {
 	}
 
 	@Override
-	public void put(String key, byte[] value) throws IOException {
-		put(key, value, (String[]) null);
+	public boolean put(String key, byte[] value) throws IOException {
+		return put(key, value, (String[]) null);
 	}
 
 	@Override
-	public void put(String key, byte[] value, String... tags) throws IOException {
-		Record r = createNewRecord(key, value, tags);
-		r.setPos((int) store.length());
-		storeRecord(r);
-		index(r);
+	public boolean put(String key, byte[] value, String... tags) throws IOException {
+		try {
+			writeLock.lock();
+			if (this.keyValueIndex.containsKey(key)) {
+				return false;
+			}
+			Record r = createNewRecord(key, value, tags);
+			r.setPos((int) store.length());
+			storeRecord(r);
+			index(r);
+		} finally {
+			writeLock.unlock();
+		}
+		return true;
 	}
 
 	@Override
-	public int size() {
+	public long size() {
 		return this.keyValueIndex.size();
 	}
 
@@ -269,11 +278,6 @@ public class LocalImpl implements Tkv {
 			bb.put(r.getTagsToString().getBytes());
 		}
 		bb.put((byte) Record.ENDER);
-		try {
-			writeLock.lock();
-			this.store.append(bb.array());
-		} finally {
-			writeLock.unlock();
-		}
+		this.store.append(bb.array());
 	}
 }

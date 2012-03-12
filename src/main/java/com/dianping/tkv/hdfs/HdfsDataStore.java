@@ -4,9 +4,7 @@
 package com.dianping.tkv.hdfs;
 
 import java.io.IOException;
-import java.net.URI;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,20 +25,11 @@ public class HdfsDataStore implements DataStore {
 
 	private FSDataOutputStream output;
 
-	public HdfsDataStore(String dir, String filename) throws IOException {
-		Configuration config = new Configuration();
-		config.setInt("io.file.buffer.size", 8192);
-		URI uri = URI.create(dir);
-		FileSystem fs;
-		if (uri == null) {
-			fs = FileSystem.getLocal(config);
-		} else {
-			fs = FileSystem.get(uri, config);
-		}
-		this.fs = fs;
-		path = new Path(fs.getWorkingDirectory(), filename);
-		input = fs.open(path, 1024);
-		output = fs.create(path);
+	public HdfsDataStore(String hdfsDir, String hdfsFilename) throws IOException {
+		this.fs = HdfsHelper.createFileSystem(hdfsDir);
+		this.path = new Path(this.fs.getWorkingDirectory(), hdfsFilename);
+		this.input = this.fs.open(this.path, 1024);
+		this.output = this.fs.create(this.path);
 	}
 
 	/*

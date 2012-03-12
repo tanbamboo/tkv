@@ -39,8 +39,8 @@ public class HdfsImpl implements Tkv {
 
 	}
 
-	public HdfsImpl(String hdfsDir, String localDir, String indexFilename, String dataFilename, int keyLength, int tagLength) throws IOException {
-		this.indexStore = new HdfsIndexStore(hdfsDir, new File(localDir, indexFilename), keyLength, tagLength);
+	public HdfsImpl(String hdfsDir, File localDir, String indexFilename, String dataFilename, int keyLength, int tagLength) throws IOException {
+		this.indexStore = new HdfsIndexStore(hdfsDir, indexFilename, new File(localDir, indexFilename), keyLength, tagLength);
 		this.dataStore = new HdfsDataStore(hdfsDir, dataFilename);
 	}
 
@@ -162,12 +162,12 @@ public class HdfsImpl implements Tkv {
 	 * @see com.dianping.tkv.Tkv#put(java.lang.String, byte[])
 	 */
 	@Override
-	public void put(String key, byte[] value) throws IOException {
+	public boolean put(String key, byte[] value) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public void put(String key, byte[] value, String... tags) throws IOException {
+	public boolean put(String key, byte[] value, String... tags) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -177,7 +177,7 @@ public class HdfsImpl implements Tkv {
 	 * @see com.dianping.tkv.Tkv#size()
 	 */
 	@Override
-	public int size() throws IOException {
+	public long size() throws IOException {
 		return this.getIndexStore().size();
 	}
 

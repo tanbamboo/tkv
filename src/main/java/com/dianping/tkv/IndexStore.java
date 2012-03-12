@@ -19,6 +19,12 @@ public interface IndexStore {
 
 	Meta getIndex(String key, String tag, Comparator<String> c) throws IOException;
 
-	int size() throws IOException;
+	int getIndexLength();
+
+	long size() throws IOException;
+
+	long length() throws IOException;
+
+	boolean delete() throws IOException;
 
 }

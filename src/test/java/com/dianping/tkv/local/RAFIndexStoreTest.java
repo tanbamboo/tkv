@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.dianping.tkv.hdfs;
+package com.dianping.tkv.local;
 
 import java.io.IOException;
 
@@ -20,8 +20,8 @@ import com.dianping.tkv.Meta;
  * @author sean.wang
  * @since Mar 7, 2012
  */
-public class HdfsIndexStoreTest extends IndexStoreTestHelper {
-	private HdfsIndexStore indexStore;
+public class RAFIndexStoreTest extends IndexStoreTestHelper {
+	private RAFIndexStore indexStore;
 
 	/**
 	 * @throws java.lang.Exception
@@ -43,7 +43,7 @@ public class HdfsIndexStoreTest extends IndexStoreTestHelper {
 	@Before
 	public void setUp() throws Exception {
 		indexFile.delete();
-		indexStore = new HdfsIndexStore(null, "target/hdfs", indexFile, 8, 100);
+		indexStore = new RAFIndexStore(indexFile, 8, 100);
 	}
 
 	/**
@@ -79,24 +79,6 @@ public class HdfsIndexStoreTest extends IndexStoreTestHelper {
 		index = indexStore.getIndex(meta1.getKey(), meta1.getTags().keySet().iterator().next());
 		Assert.assertEquals(meta1.toString(), index.toString());
 
-	}
-
-	@Test
-	public void testUploadToHdfs() throws IOException {
-		final Meta meta1 = getMeta1();
-		this.indexStore.append(meta1);
-		this.indexStore.upload();
-	}
-
-	@Test
-	public void testDownloadToHdfs() throws IOException {
-		final Meta meta1 = getMeta1();
-		this.indexStore.append(meta1);
-		long length = this.indexFile.length();
-		this.indexStore.upload();
-		this.indexFile.delete();
-		this.indexStore.download();
-		Assert.assertEquals(length, this.indexFile.length());
 	}
 
 }

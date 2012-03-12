@@ -82,9 +82,20 @@ public interface Tkv {
 	 */
 	Record getRecord(String key, String tag) throws IOException;
 
-	void put(String key, byte[] value) throws IOException;
+	/**
+	 * @param key
+	 * @param value
+	 * @throws IOException
+	 */
+	boolean put(String key, byte[] value) throws IOException;
 
-	void put(String key, byte[] value, String... tags) throws IOException;
+	/**
+	 * @param key
+	 * @param value
+	 * @param tags
+	 * @throws IOException
+	 */
+	boolean put(String key, byte[] value, String... tags) throws IOException;
 
 	/**
 	 * record size
@@ -92,5 +103,5 @@ public interface Tkv {
 	 * @return
 	 * @throws IOException
 	 */
-	int size() throws IOException;
+	long size() throws IOException;
 }

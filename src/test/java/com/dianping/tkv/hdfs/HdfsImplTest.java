@@ -123,7 +123,22 @@ public class HdfsImplTest {
 			}
 
 			@Override
-			public int size() throws IOException {
+			public long size() throws IOException {
+				return 0;
+			}
+
+			@Override
+			public boolean delete() throws IOException {
+				return false;
+			}
+
+			@Override
+			public int getIndexLength() {
+				return 0;
+			}
+
+			@Override
+			public long length() throws IOException {
 				return 0;
 			}
 		});
