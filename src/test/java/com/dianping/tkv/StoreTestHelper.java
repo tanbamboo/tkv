@@ -9,9 +9,15 @@ import java.io.File;
  * @author sean.wang
  * @since Mar 9, 2012
  */
-public abstract class IndexStoreTestHelper {
-	
-	protected File indexFile = new File(System.getProperty("user.dir") + "/target/index");
+public abstract class StoreTestHelper {
+
+	protected File localDir = new File(System.getProperty("user.dir") + "/target/local/");
+
+	protected File localHdfsDir = new File(System.getProperty("user.dir") + "/target/hdfs/");
+
+	protected File localIndexFile = new File(localDir, "a.index");
+
+	protected File localDataFile = new File(localDir, "a.data");
 
 	public Meta getMeta1() {
 		final Meta meta1 = new Meta();
@@ -20,10 +26,12 @@ public abstract class IndexStoreTestHelper {
 		meta1.setLength(10);
 		Tag t1 = new Tag();
 		t1.setName("pet");
+		t1.setPos(0);
 		t1.setNext(1);
 		meta1.addTag(t1);
 		Tag t2 = new Tag();
 		t2.setName("bird");
+		t2.setPos(0);
 		meta1.addTag(t2);
 		return meta1;
 	}
@@ -35,6 +43,7 @@ public abstract class IndexStoreTestHelper {
 		meta2.setLength(20);
 		Tag t3 = new Tag();
 		t3.setName("pet");
+		t3.setPos(1);
 		t3.setPrevious(0);
 		meta2.addTag(t3);
 		return meta2;

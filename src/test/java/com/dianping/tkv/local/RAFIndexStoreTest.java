@@ -13,14 +13,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.dianping.tkv.IndexStoreTestHelper;
+import com.dianping.tkv.StoreTestHelper;
 import com.dianping.tkv.Meta;
 
 /**
  * @author sean.wang
  * @since Mar 7, 2012
  */
-public class RAFIndexStoreTest extends IndexStoreTestHelper {
+public class RAFIndexStoreTest extends StoreTestHelper {
 	private RAFIndexStore indexStore;
 
 	/**
@@ -42,8 +42,8 @@ public class RAFIndexStoreTest extends IndexStoreTestHelper {
 	 */
 	@Before
 	public void setUp() throws Exception {
-		indexFile.delete();
-		indexStore = new RAFIndexStore(indexFile, 8, 100);
+		localIndexFile.delete();
+		indexStore = new RAFIndexStore(localIndexFile, 8, 100);
 	}
 
 	/**
@@ -52,7 +52,7 @@ public class RAFIndexStoreTest extends IndexStoreTestHelper {
 	@After
 	public void tearDown() throws Exception {
 		indexStore.close();
-		indexFile.delete();
+		localIndexFile.delete();
 	}
 
 	@Test

@@ -19,4 +19,6 @@ public interface DataStore {
 
 	long length() throws IOException;
 
+	boolean delete() throws IOException;
+
 }

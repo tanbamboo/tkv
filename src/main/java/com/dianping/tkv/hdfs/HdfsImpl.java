@@ -14,10 +14,12 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.FileSystem;
+
 import com.dianping.tkv.DataStore;
 import com.dianping.tkv.IndexStore;
 import com.dianping.tkv.Meta;
-import com.dianping.tkv.MetaHolder;
+import com.dianping.tkv.BatchHolder;
 import com.dianping.tkv.Record;
 import com.dianping.tkv.Tag;
 import com.dianping.tkv.Tkv;
@@ -27,21 +29,26 @@ import com.dianping.tkv.Tkv;
  * @since Mar 7, 2012
  */
 public class HdfsImpl implements Tkv {
-	private IndexStore indexStore;
+	private HdfsIndexStore indexStore;
 
-	private DataStore dataStore;
+	private HdfsDataStore dataStore;
 
-	private Lock indexWriteLock = new ReentrantLock();
-
-	private Lock dataWriteLock = new ReentrantLock();
+	private Lock writeLock = new ReentrantLock();
 
 	public HdfsImpl() {
 
 	}
 
-	public HdfsImpl(String hdfsDir, File localDir, String indexFilename, String dataFilename, int keyLength, int tagLength) throws IOException {
-		this.indexStore = new HdfsIndexStore(hdfsDir, indexFilename, new File(localDir, indexFilename), keyLength, tagLength);
-		this.dataStore = new HdfsDataStore(hdfsDir, dataFilename);
+	public HdfsImpl(FileSystem fs, File localDir, String indexFilename, String dataFilename, int keyLength, int tagLength) throws IOException {
+		File localIndexFile = new File(localDir, indexFilename);
+		if (!localDir.exists()) {
+			localDir.mkdirs();
+		}
+		if (!localIndexFile.exists()) {
+			localIndexFile.createNewFile();
+		}
+		this.setIndexStore(new HdfsIndexStore(fs, indexFilename, localIndexFile, keyLength, tagLength));
+		this.setDataStore(new HdfsDataStore(fs, dataFilename));
 	}
 
 	/*
@@ -52,16 +59,11 @@ public class HdfsImpl implements Tkv {
 	@Override
 	public void close() throws IOException {
 		try {
-			indexWriteLock.lock();
+			writeLock.lock();
 			this.getIndexStore().close();
-		} finally {
-			indexWriteLock.unlock();
-		}
-		try {
-			dataWriteLock.lock();
 			this.getDataStore().close();
 		} finally {
-			dataWriteLock.unlock();
+			writeLock.unlock();
 		}
 	}
 
@@ -93,15 +95,6 @@ public class HdfsImpl implements Tkv {
 		return getRecordFromIndex(meta);
 	}
 
-	/**
-	 * @param index
-	 * @return
-	 * @throws IOException
-	 */
-	private byte[] getRecordFromIndex(Meta meta) throws IOException {
-		return getDataStore().get(meta.getOffset(), meta.getLength());
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -114,6 +107,10 @@ public class HdfsImpl implements Tkv {
 			return null;
 		}
 		return getRecordFromIndex(meta);
+	}
+
+	public DataStore getDataStore() {
+		return dataStore;
 	}
 
 	/*
@@ -146,6 +143,10 @@ public class HdfsImpl implements Tkv {
 		return this.getIndexStore().getIndex(key, tag);
 	}
 
+	public IndexStore getIndexStore() {
+		return indexStore;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -156,6 +157,17 @@ public class HdfsImpl implements Tkv {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * @param index
+	 * @return
+	 * @throws IOException
+	 */
+	private byte[] getRecordFromIndex(Meta meta) throws IOException {
+		return getDataStore().get(meta.getOffset(), meta.getLength());
+	}
+
+	private int pos = 0;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -163,12 +175,70 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public boolean put(String key, byte[] value) throws IOException {
-		throw new UnsupportedOperationException();
+		try {
+			this.writeLock.lock();
+			if (this.getIndexStore().getIndex(key) != null) {
+				return false; // this key already exists
+			}
+			long offset = this.getDataStore().length();
+			this.getDataStore().append(value);
+			Meta meta = new Meta();
+			meta.setKey(key);
+			meta.setOffset(offset);
+			meta.setLength(value.length);
+			this.getIndexStore().append(meta);
+			pos++;
+			return true;
+		} finally {
+			this.writeLock.unlock();
+		}
 	}
 
 	@Override
 	public boolean put(String key, byte[] value, String... tags) throws IOException {
 		throw new UnsupportedOperationException();
+	}
+
+	public void batchPut(BatchHolder holder) throws IOException {
+		Collection<String> keys = holder.getKeys();
+		if (keys == null || keys.size() == 0) {
+			return;
+		}
+		Object[] keyArray = keys.toArray();
+		Arrays.sort(keyArray);
+		List<Meta> metas = new ArrayList<Meta>(keyArray.length);
+		// build tag position
+		Map<String, Tag> lastTagHolder = new HashMap<String, Tag>();
+		for (Object o : keyArray) {
+			String key = (String) o;
+			Meta meta = new Meta();
+			meta.setKey(key);
+			holder.getMeta(key, meta);
+			Map<String, Tag> tags = meta.getTags();
+			if (tags != null) {
+				for (Tag t : tags.values()) {
+					t.setPos(pos);
+					Tag holdTag = lastTagHolder.get(t.getName());
+					if (holdTag != null) {
+						t.setPrevious(holdTag.getPos());
+						holdTag.setNext(pos);
+					}
+					lastTagHolder.put(t.getName(), t);
+				}
+			}
+			pos++;
+			metas.add(meta);
+		}
+		// store index
+		try {
+			writeLock.lock();
+			for (Meta meta : metas) {
+				this.getDataStore().append(holder.getValue(meta.getKey()));
+				this.getIndexStore().append(meta);
+			}
+		} finally {
+			writeLock.unlock();
+		}
 	}
 
 	/*
@@ -181,72 +251,35 @@ public class HdfsImpl implements Tkv {
 		return this.getIndexStore().size();
 	}
 
-	public void putIndex(MetaHolder holder) throws IOException {
-		Collection<String> keys = holder.getKeys();
-		if (keys == null || keys.size() == 0) {
-			return;
-		}
-		Object[] keyArray = keys.toArray();
-		Arrays.sort(keyArray);
-		List<Meta> metas = new ArrayList<Meta>(keyArray.length);
-		int i = 0;
-		// build tag position
-		Map<String, Tag> lastTagHolder = new HashMap<String, Tag>();
-		for (Object o : keyArray) {
-			String key = (String) o;
-			Meta meta = new Meta();
-			meta.setKey(key);
-			holder.getMeta(key, meta);
-			Map<String, Tag> tags = meta.getTags();
-			if (tags != null) {
-				for (Tag t : tags.values()) {
-					t.setPos(i);
-					Tag holdTag = lastTagHolder.get(t.getName());
-					if (holdTag != null) {
-						t.setPrevious(holdTag.getPos());
-						holdTag.setNext(i);
-					}
-					lastTagHolder.put(t.getName(), t);
-				}
-			}
-			i++;
-			metas.add(meta);
-		}
-		// store index
-		try {
-			indexWriteLock.lock();
-			for (Meta meta : metas) {
-				this.getIndexStore().append(meta);
-			}
-		} finally {
-			indexWriteLock.unlock();
-		}
+	public void startWrite() throws IOException {
+		this.dataStore.startWrite();
 	}
 
-	public void putData(File dataFile) {
-		try {
-			dataWriteLock.lock();
-			// TODO
-		} finally {
-			dataWriteLock.unlock();
-		}
-
+	public void endWrite() throws IOException {
+		this.dataStore.endWrite();
 	}
 
-	public IndexStore getIndexStore() {
-		return indexStore;
+	public void startRead() throws IOException {
+		this.dataStore.startRead();
 	}
 
-	public void setIndexStore(IndexStore indexStore) {
+	public void endRead() throws IOException {
+		this.dataStore.endRead();
+	}
+
+	public void setDataStore(HdfsDataStore dataStore) {
+		this.dataStore = dataStore;
+	}
+
+	public void setIndexStore(HdfsIndexStore indexStore) {
 		this.indexStore = indexStore;
 	}
 
-	public DataStore getDataStore() {
-		return dataStore;
-	}
-
-	public void setDataStore(DataStore dataStore) {
-		this.dataStore = dataStore;
+	@Override
+	public boolean delete() throws IOException {
+		boolean dataDeleted = this.dataStore.delete();
+		boolean indexDeleted = this.indexStore.delete();
+		return dataDeleted && indexDeleted;
 	}
 
 }

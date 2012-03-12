@@ -280,4 +280,9 @@ public class LocalImpl implements Tkv {
 		bb.put((byte) Record.ENDER);
 		this.store.append(bb.array());
 	}
+
+	@Override
+	public boolean delete() throws IOException {
+		return this.store.delete();
+	}
 }

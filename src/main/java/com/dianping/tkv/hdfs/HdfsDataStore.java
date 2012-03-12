@@ -3,6 +3,7 @@
  */
 package com.dianping.tkv.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -17,34 +18,45 @@ import com.dianping.tkv.DataStore;
  * @since Mar 7, 2012
  */
 public class HdfsDataStore implements DataStore {
-	private FileSystem fs;
+	private long length = 0;
 
 	private Path path;
 
-	private FSDataInputStream input;
+	private FileSystem fs;
 
 	private FSDataOutputStream output;
 
-	public HdfsDataStore(String hdfsDir, String hdfsFilename) throws IOException {
-		this.fs = HdfsHelper.createFileSystem(hdfsDir);
-		this.path = new Path(this.fs.getWorkingDirectory(), hdfsFilename);
-		this.input = this.fs.open(this.path, 1024);
-		this.output = this.fs.create(this.path);
+	private FSDataInputStream input;
+
+	public HdfsDataStore() {
+
+	}
+
+	public HdfsDataStore(FileSystem fs, String hdfsFilename) throws IOException {
+		this.path = new Path(fs.getWorkingDirectory(), hdfsFilename);
+		this.fs = fs;
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.dianping.tkv.DataStore#get(long, int)
+	 * @see com.dianping.tkv.DataStore#append(byte)
 	 */
 	@Override
-	public byte[] get(long offset, int length) throws IOException {
-		byte[] bytes = new byte[length];
-		synchronized (input) {
-			input.seek(offset);
-			input.read(bytes);
-		}
-		return bytes;
+	public void append(byte b) throws IOException {
+		this.output.write(b);
+		this.length++;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.dianping.tkv.DataStore#append(byte[])
+	 */
+	@Override
+	public void append(byte[] bytes) throws IOException {
+		this.output.write(bytes);
+		this.length += bytes.length;
 	}
 
 	@Override
@@ -55,41 +67,65 @@ public class HdfsDataStore implements DataStore {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.dianping.tkv.DataStore#append(byte[])
-	 */
-	@Override
-	public void append(byte[] bytes) throws IOException {
-		synchronized (output) {
-			output.write(bytes);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.dianping.tkv.DataStore#append(byte)
-	 */
-	@Override
-	public void append(byte b) throws IOException {
-		synchronized (output) {
-			output.write(b);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.dianping.tkv.DataStore#close()
 	 */
 	@Override
 	public void close() throws IOException {
-		synchronized (output) {
+		if (this.output != null) {
 			this.output.close();
 		}
-		synchronized (input) {
+		if (this.input != null) {
 			this.input.close();
 		}
 		this.fs.close();
+	}
+
+	public void startWrite() throws IOException {
+		if (this.output == null) {
+			this.output = this.fs.create(this.path);
+		}
+	}
+
+	public void endWrite() throws IOException {
+		if (this.output != null) {
+			this.output.flush();
+			this.output.close();
+			this.output = null;
+		}
+	}
+
+	public void startRead() throws IOException {
+		if (this.input == null) {
+			try {
+				this.input = this.fs.open(this.path, 1024);
+			} catch (FileNotFoundException e) {
+
+			}
+		}
+	}
+
+	public void endRead() throws IOException {
+		if (this.input != null) {
+			this.input.close();
+			this.input = null;
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.dianping.tkv.DataStore#get(long, int)
+	 */
+	@Override
+	public byte[] get(long offset, int length) throws IOException {
+		FSDataInputStream in = this.input;
+		if (in == null) {
+			return null;
+		}
+		byte[] bytes = new byte[length];
+		in.seek(offset);
+		in.read(bytes);
+		return bytes;
 	}
 
 	/*
@@ -99,7 +135,16 @@ public class HdfsDataStore implements DataStore {
 	 */
 	@Override
 	public long length() throws IOException {
-		return this.fs.getFileStatus(path).getLen();
+		return this.length;
+	}
+
+	@Override
+	public boolean delete() throws IOException {
+		boolean remoteDeleted = false;
+		if (this.fs != null) {
+			remoteDeleted = this.fs.delete(path, false);
+		}
+		return remoteDeleted;
 	}
 
 }

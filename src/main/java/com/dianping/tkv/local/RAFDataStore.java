@@ -19,9 +19,12 @@ public class RAFDataStore implements DataStore {
 
 	private RandomAccessFile readRAF;
 
+	private File storeFile;
+
 	public RAFDataStore(File dbFile) throws IOException {
-		writeRAF = new RandomAccessFile(dbFile, "rw");
-		readRAF = new RandomAccessFile(dbFile, "r");
+		this.storeFile = dbFile;
+		this.writeRAF = new RandomAccessFile(dbFile, "rw");
+		this.readRAF = new RandomAccessFile(dbFile, "r");
 	}
 
 	@Override
@@ -58,6 +61,11 @@ public class RAFDataStore implements DataStore {
 	@Override
 	public long length() throws IOException {
 		return readRAF.length();
+	}
+
+	@Override
+	public boolean delete() throws IOException {
+		return this.storeFile.delete();
 	}
 
 }

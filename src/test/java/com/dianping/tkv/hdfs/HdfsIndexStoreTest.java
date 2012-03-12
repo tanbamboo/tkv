@@ -7,20 +7,21 @@ import java.io.IOException;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.dianping.tkv.IndexStoreTestHelper;
+import com.dianping.tkv.StoreTestHelper;
 import com.dianping.tkv.Meta;
 
 /**
  * @author sean.wang
  * @since Mar 7, 2012
  */
-public class HdfsIndexStoreTest extends IndexStoreTestHelper {
+public class HdfsIndexStoreTest extends StoreTestHelper {
 	private HdfsIndexStore indexStore;
 
 	/**
@@ -42,8 +43,8 @@ public class HdfsIndexStoreTest extends IndexStoreTestHelper {
 	 */
 	@Before
 	public void setUp() throws Exception {
-		indexFile.delete();
-		indexStore = new HdfsIndexStore(null, "target/hdfs", indexFile, 8, 100);
+		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
+		indexStore = new HdfsIndexStore(localHdfsDir, localIndexFile.getName(), localIndexFile, 8, 100);
 	}
 
 	/**
@@ -52,7 +53,7 @@ public class HdfsIndexStoreTest extends IndexStoreTestHelper {
 	@After
 	public void tearDown() throws Exception {
 		indexStore.close();
-		indexFile.delete();
+		indexStore.delete();
 	}
 
 	@Test
@@ -85,18 +86,19 @@ public class HdfsIndexStoreTest extends IndexStoreTestHelper {
 	public void testUploadToHdfs() throws IOException {
 		final Meta meta1 = getMeta1();
 		this.indexStore.append(meta1);
-		this.indexStore.upload();
+		this.indexStore.flush();
 	}
 
 	@Test
 	public void testDownloadToHdfs() throws IOException {
 		final Meta meta1 = getMeta1();
 		this.indexStore.append(meta1);
-		long length = this.indexFile.length();
-		this.indexStore.upload();
-		this.indexFile.delete();
+		long length = this.localIndexFile.length();
+		this.indexStore.flush();
+		this.localIndexFile.delete();
 		this.indexStore.download();
-		Assert.assertEquals(length, this.indexFile.length());
+		Assert.assertEquals(length, this.localIndexFile.length());
+
 	}
 
 }

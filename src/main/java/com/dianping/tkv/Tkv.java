@@ -104,4 +104,6 @@ public interface Tkv {
 	 * @throws IOException
 	 */
 	long size() throws IOException;
+
+	boolean delete() throws IOException;
 }

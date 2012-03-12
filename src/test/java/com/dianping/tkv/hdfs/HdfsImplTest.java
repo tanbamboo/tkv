@@ -7,11 +7,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -19,16 +19,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.dianping.tkv.IndexStore;
 import com.dianping.tkv.Meta;
-import com.dianping.tkv.MetaHolder;
+import com.dianping.tkv.BatchHolder;
+import com.dianping.tkv.StoreTestHelper;
 import com.dianping.tkv.Tag;
 
 /**
  * @author sean.wang
  * @since Mar 7, 2012
  */
-public class HdfsImplTest {
+public class HdfsImplTest extends StoreTestHelper {
 
 	/**
 	 * @throws java.lang.Exception
@@ -56,93 +56,34 @@ public class HdfsImplTest {
 	 */
 	@After
 	public void tearDown() throws Exception {
+		this.localIndexFile.delete();
+		this.localDataFile.delete();
 	}
 
 	@Test
 	public void testPutMetaHolder() throws IOException {
-		final Meta meta1 = new Meta();
-		meta1.setKey("12345678");
-		meta1.setOffset(0);
-		meta1.setLength(10);
-		Tag t1 = new Tag();
-		t1.setName("pet");
-		t1.setNext(1);
-		t1.setPos(0);
-		meta1.addTag(t1);
-		Tag t2 = new Tag();
-		t2.setName("bird");
-		t2.setPos(0);
-		meta1.addTag(t2);
+		final Meta meta1 = super.getMeta1();
 
-		final Meta meta2 = new Meta();
-		meta2.setKey("87654321");
-		meta2.setOffset(10);
-		meta2.setLength(20);
-		Tag t3 = new Tag();
-		t3.setName("pet");
-		t3.setPrevious(0);
-		t3.setPos(1);
-		meta2.addTag(t3);
+		final Meta meta2 = super.getMeta2();
 
 		final HdfsImpl hdfs = new HdfsImpl();
 		final List<Meta> metas = new ArrayList<Meta>();
-		hdfs.setIndexStore(new IndexStore() {
+		hdfs.setDataStore(new HdfsDataStore(){
+
+			@Override
+			public void append(byte[] bytes) throws IOException {
+			}
+			
+		});
+		hdfs.setIndexStore(new HdfsIndexStore() {
 
 			@Override
 			public void append(Meta meta) throws IOException {
 				metas.add(meta);
 			}
 
-			@Override
-			public void close() throws IOException {
-			}
-
-			@Override
-			public Meta getIndex(int indexPos) throws IOException {
-				return null;
-			}
-
-			@Override
-			public Meta getIndex(String key) throws IOException {
-				return null;
-			}
-
-			@Override
-			public Meta getIndex(String key, Comparator<String> c) throws IOException {
-				return null;
-			}
-
-			@Override
-			public Meta getIndex(String key, String tag) throws IOException {
-				return null;
-			}
-
-			@Override
-			public Meta getIndex(String key, String tag, Comparator<String> c) throws IOException {
-				return null;
-			}
-
-			@Override
-			public long size() throws IOException {
-				return 0;
-			}
-
-			@Override
-			public boolean delete() throws IOException {
-				return false;
-			}
-
-			@Override
-			public int getIndexLength() {
-				return 0;
-			}
-
-			@Override
-			public long length() throws IOException {
-				return 0;
-			}
 		});
-		hdfs.putIndex(new MetaHolder() {
+		hdfs.batchPut(new BatchHolder() {
 			Map<String, Meta> map = new HashMap<String, Meta>();
 			{
 				map.put(meta1.getKey(), meta1);
@@ -166,10 +107,31 @@ public class HdfsImplTest {
 				}
 			}
 
+			@Override
+			public byte[] getValue(String key) {
+				return new byte[]{'1'};
+			}
+
 		});
 
 		Assert.assertEquals(Arrays.toString(new Meta[] { meta1, meta2 }), Arrays.toString(metas.toArray()));
+		hdfs.delete();
+	}
 
+	@Test
+	public void testPutAndGet() throws IOException {
+		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
+		final HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 8, 100);
+		Meta m1 = super.getMeta1();
+		String value1 = "1234";
+		hdfs.startWrite();
+		Assert.assertTrue(hdfs.put(m1.getKey(), value1.getBytes()));
+		hdfs.endWrite();
+		hdfs.startRead();
+		Assert.assertEquals(value1, new String(hdfs.get(m1.getKey())));
+		hdfs.endRead();
+		hdfs.close();
+		hdfs.delete();
 	}
 
 }

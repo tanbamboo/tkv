@@ -24,7 +24,7 @@ import com.dianping.tkv.util.IoKit;
  * @since Mar 7, 2012
  */
 public class HdfsIndexStore implements IndexStore {
-	private RAFIndexStore indexStore;
+	private RAFIndexStore localIndexStore;
 
 	private FileSystem fs;
 
@@ -32,10 +32,14 @@ public class HdfsIndexStore implements IndexStore {
 
 	private File localFile;
 
-	public HdfsIndexStore(String hdfsDir, String hdfsFilename, File localFile, int keyLength, int tagLength) throws IOException {
+	public HdfsIndexStore() {
+
+	}
+
+	public HdfsIndexStore(FileSystem fs, String hdfsFilename, File localFile, int keyLength, int tagLength) throws IOException {
+		this.fs = fs;
 		this.localFile = localFile;
-		this.indexStore = new RAFIndexStore(localFile, keyLength, tagLength);
-		this.fs = HdfsHelper.createFileSystem(hdfsDir);
+		this.localIndexStore = new RAFIndexStore(localFile, keyLength, tagLength);
 		this.path = new Path(fs.getWorkingDirectory(), hdfsFilename);
 	}
 
@@ -46,7 +50,7 @@ public class HdfsIndexStore implements IndexStore {
 	 */
 	@Override
 	public void append(Meta meta) throws IOException {
-		this.indexStore.append(meta);
+		this.localIndexStore.append(meta);
 	}
 
 	/*
@@ -56,13 +60,21 @@ public class HdfsIndexStore implements IndexStore {
 	 */
 	@Override
 	public void close() throws IOException {
-		this.indexStore.close();
+		this.localIndexStore.close();
 		this.fs.close();
 	}
 
 	@Override
 	public boolean delete() throws IOException {
-		return this.fs.delete(path, false);
+		boolean localDeleted = false;
+		if (this.localIndexStore != null) {
+			localDeleted = this.localIndexStore.delete();
+		}
+		boolean remoteDeleted = false;
+		if (this.fs != null) {
+			remoteDeleted = this.fs.delete(path, false);
+		}
+		return localDeleted && remoteDeleted;
 	}
 
 	public void download() throws IOException {
@@ -78,12 +90,12 @@ public class HdfsIndexStore implements IndexStore {
 	 */
 	@Override
 	public Meta getIndex(int indexPos) throws IOException {
-		return this.indexStore.getIndex(indexPos);
+		return this.localIndexStore.getIndex(indexPos);
 	}
 
 	@Override
 	public Meta getIndex(String key) throws IOException {
-		return this.indexStore.getIndex(key);
+		return this.localIndexStore.getIndex(key);
 	}
 
 	/*
@@ -93,22 +105,22 @@ public class HdfsIndexStore implements IndexStore {
 	 */
 	@Override
 	public Meta getIndex(String key, Comparator<String> c) throws IOException {
-		return this.indexStore.getIndex(key, c);
+		return this.localIndexStore.getIndex(key, c);
 	}
 
 	@Override
 	public Meta getIndex(String key, String tagName) throws IOException {
-		return this.indexStore.getIndex(key, tagName);
+		return this.localIndexStore.getIndex(key, tagName);
 	}
 
 	@Override
 	public Meta getIndex(String key, String tagName, Comparator<String> c) throws IOException {
-		return this.indexStore.getIndex(key, tagName, c);
+		return this.localIndexStore.getIndex(key, tagName, c);
 	}
 
 	@Override
 	public int getIndexLength() {
-		return this.indexStore.getIndexLength();
+		return this.localIndexStore.getIndexLength();
 	}
 
 	/*
@@ -121,7 +133,8 @@ public class HdfsIndexStore implements IndexStore {
 		return length() / getIndexLength();
 	}
 
-	public void upload() throws IOException {
+	@Override
+	public void flush() throws IOException {
 		InputStream input = new FileInputStream(this.localFile);
 		OutputStream output = fs.create(path);
 		IoKit.copyAndClose(input, output);

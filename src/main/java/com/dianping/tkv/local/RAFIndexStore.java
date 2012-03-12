@@ -157,21 +157,23 @@ public class RAFIndexStore implements IndexStore {
 		m.setLength(NumberKit.bytes2Int(bytes, i));
 		i += 4;
 		int tagEnderIndex = ArrayUtils.lastIndexOf(bytes, TAG_SPLITER);
-		byte[] tagBytes = new byte[tagEnderIndex - i];
-		System.arraycopy(bytes, i, tagBytes, 0, tagBytes.length);
-		byte[][] tagSegs = ArrayKit.split(tagBytes, TAG_SPLITER);
-		for (byte[] tagSeg : tagSegs) {
-			byte[] nameSeg = new byte[tagSeg.length - 8];
-			System.arraycopy(tagSeg, 0, nameSeg, 0, nameSeg.length);
-			Tag t = new Tag();
-			t.setName(new String(nameSeg));
-			int j = nameSeg.length;
-			int previous = NumberKit.bytes2Int(tagSeg, j);
-			t.setPrevious(previous);
-			j += 4;
-			int next = NumberKit.bytes2Int(tagSeg, j);
-			t.setNext(next);
-			m.addTag(t);
+		if (tagEnderIndex > 0) {
+			byte[] tagBytes = new byte[tagEnderIndex - i];
+			System.arraycopy(bytes, i, tagBytes, 0, tagBytes.length);
+			byte[][] tagSegs = ArrayKit.split(tagBytes, TAG_SPLITER);
+			for (byte[] tagSeg : tagSegs) {
+				byte[] nameSeg = new byte[tagSeg.length - 8];
+				System.arraycopy(tagSeg, 0, nameSeg, 0, nameSeg.length);
+				Tag t = new Tag();
+				t.setName(new String(nameSeg));
+				int j = nameSeg.length;
+				int previous = NumberKit.bytes2Int(tagSeg, j);
+				t.setPrevious(previous);
+				j += 4;
+				int next = NumberKit.bytes2Int(tagSeg, j);
+				t.setNext(next);
+				m.addTag(t);
+			}
 		}
 		return m;
 	}
@@ -198,6 +200,9 @@ public class RAFIndexStore implements IndexStore {
 	public Meta getIndex(String key, Comparator<String> c) throws IOException {
 		synchronized (this.readRAF) {
 			int pos = this.binarySearchPos(key, c);
+			if (pos < 0) {
+				return null;
+			}
 			return this.getIndex(pos);
 		}
 	}
@@ -210,6 +215,9 @@ public class RAFIndexStore implements IndexStore {
 	@Override
 	public Meta getIndex(String key, String tagName, Comparator<String> c) throws IOException {
 		Meta meta = this.getIndex(key, c);
+		if (meta == null) {
+			return null;
+		}
 		Map<String, Tag> tags = meta.getTags();
 		if (tagName != null && tags.get(tagName) == null) {
 			return null;
@@ -240,6 +248,10 @@ public class RAFIndexStore implements IndexStore {
 	@Override
 	public boolean delete() throws IOException {
 		return this.storeFile.delete();
+	}
+
+	@Override
+	public void flush() throws IOException {
 	}
 
 }

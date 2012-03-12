@@ -27,4 +27,6 @@ public interface IndexStore {
 
 	boolean delete() throws IOException;
 
+	void flush() throws IOException;
+
 }
