@@ -46,7 +46,7 @@ public class HdfsIndexStoreTest extends StoreTestHelper {
 	@Before
 	public void setUp() throws Exception {
 		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
-		indexStore = new HdfsIndexStore(localHdfsDir, localIndexFile.getName(), localIndexFile, 8, 100);
+		indexStore = new HdfsIndexStore(localHdfsDir, localIndexFile.getName(), localIndexFile, 64, 100);
 	}
 
 	/**

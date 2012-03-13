@@ -3,7 +3,6 @@
  */
 package tkv;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -106,11 +105,7 @@ public class HdfsDataStore implements DataStore {
 
 	public void openInput() throws IOException {
 		if (this.input == null) {
-			try {
-				this.input = this.fs.open(this.path, 1024);
-			} catch (FileNotFoundException e) {
-
-			}
+			this.input = this.fs.open(this.path, 1024);
 		}
 	}
 
@@ -130,7 +125,7 @@ public class HdfsDataStore implements DataStore {
 	public byte[] get(long offset, int length) throws IOException {
 		FSDataInputStream in = this.input;
 		if (in == null) {
-			return null;
+			throw new IllegalStateException("input can't null");
 		}
 		byte[] bytes = new byte[length];
 		in.seek(offset);

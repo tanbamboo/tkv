@@ -44,7 +44,7 @@ public class RAFIndexStoreTest extends StoreTestHelper {
 	@Before
 	public void setUp() throws Exception {
 		localIndexFile.delete();
-		indexStore = new RAFIndexStore(localIndexFile, 8, 100);
+		indexStore = new RAFIndexStore(localIndexFile, 64, 100);
 	}
 
 	/**

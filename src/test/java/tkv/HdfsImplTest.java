@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -15,6 +16,11 @@ import org.junit.Test;
  * @since Mar 7, 2012
  */
 public class HdfsImplTest extends StoreTestHelper {
+	@Before
+	public void tearUp() throws Exception {
+		this.localIndexFile.delete();
+		this.localDataFile.delete();
+	}
 
 	/**
 	 * @throws java.lang.Exception
@@ -28,7 +34,7 @@ public class HdfsImplTest extends StoreTestHelper {
 	@Test
 	public void testPutAndGetWithoutTag() throws IOException {
 		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
-		final HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 8, 100);
+		final HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
 		Meta m1 = super.getMeta1();
 		String value1 = "1234";
 		hdfs.startWrite();
@@ -45,7 +51,7 @@ public class HdfsImplTest extends StoreTestHelper {
 	@Test
 	public void testPutAndGetWithTag() throws IOException {
 		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
-		final HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
+		HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
 
 		hdfs.startWrite();
 		// keys must asc order for offset calculation bellow!
@@ -75,8 +81,14 @@ public class HdfsImplTest extends StoreTestHelper {
 		Assert.assertEquals("key2 is next key1 with the same tag", value2, new String(hdfs.getNext(key1, tagName1)));
 		Assert.assertEquals("key1 is previous key2 with the same tag", value1, new String(hdfs.getPrevious(key2, tagName1)));
 
-		hdfs.delete();
 		hdfs.close();
+
+		hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
+		hdfs.startRead();
+		Assert.assertEquals(value1, new String(hdfs.get(key1)));
+		Assert.assertEquals(value1, new String(hdfs.get(key1, tagName1)));
+
+		hdfs.delete();
 	}
 
 }
