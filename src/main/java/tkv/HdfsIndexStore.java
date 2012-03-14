@@ -133,14 +133,9 @@ public class HdfsIndexStore implements IndexStore {
 
 	@Override
 	public long length() throws IOException {
-		return this.fs.getFileStatus(path).getLen();
+		return this.localIndexStore.length();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.dianping.cat.storage.hdfs.hdfs.IndexStore#size()
-	 */
 	@Override
 	public long size() throws IOException {
 		return length() / getIndexLength();
