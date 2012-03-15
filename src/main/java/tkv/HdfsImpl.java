@@ -33,10 +33,16 @@ public class HdfsImpl implements Tkv {
 	public HdfsImpl(FileSystem fs, File localDir, String indexFilename, String dataFilename, int keyLength, int tagLength) throws IOException {
 		File localIndexFile = new File(localDir, indexFilename);
 		if (!localDir.exists()) {
-			localDir.mkdirs();
+			boolean rs = localDir.mkdirs();
+			if (!rs) {
+				throw new IOException("can't create local dir!");
+			}
 		}
 		if (!localIndexFile.exists()) {
-			localIndexFile.createNewFile();
+			boolean rs = localIndexFile.createNewFile();
+			if (!rs) {
+				throw new IOException("can't create local index file!");
+			}
 		}
 		this.setIndexStore(new HdfsIndexStore(fs, indexFilename, localIndexFile, keyLength, tagLength));
 		this.setDataStore(new HdfsDataStore(fs, dataFilename));
