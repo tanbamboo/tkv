@@ -58,7 +58,7 @@ public class LocalImplTest {
 	@After
 	public void tearDown() throws Exception {
 		tkv.close();
-		dbFile.delete();
+		tkv.delete();
 	}
 
 	/**

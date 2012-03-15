@@ -16,6 +16,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.FileSystem;
 
+import tkv.hdfs.HdfsDataStore;
+import tkv.hdfs.HdfsIndexStore;
+
 /**
  * @author sean.wang
  * @since Mar 7, 2012
@@ -48,8 +51,8 @@ public class HdfsImpl implements Tkv {
 	public void close() throws IOException {
 		try {
 			writeLock.lock();
-			this.getIndexStore().close();
-			this.getDataStore().close();
+			this.indexStore.close();
+			this.dataStore.close();
 		} finally {
 			writeLock.unlock();
 		}
@@ -62,7 +65,7 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public byte[] get(int indexPos) throws IOException {
-		Meta meta = this.getIndex(indexPos);
+		Meta meta = this.indexStore.getIndex(indexPos);
 		if (meta == null) {
 			return null;
 		}
@@ -108,7 +111,7 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public Meta getIndex(int indexPos) throws IOException {
-		return this.getIndexStore().getIndex(indexPos);
+		return this.indexStore.getIndex(indexPos);
 	}
 
 	/*
@@ -118,7 +121,7 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public Meta getIndex(String key) throws IOException {
-		return this.getIndexStore().getIndex(key);
+		return this.indexStore.getIndex(key);
 	}
 
 	/*
@@ -128,7 +131,7 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public Meta getIndex(String key, String tag) throws IOException {
-		return this.getIndexStore().getIndex(key, tag);
+		return this.indexStore.getIndex(key, tag);
 	}
 
 	public IndexStore getIndexStore() {
@@ -151,7 +154,7 @@ public class HdfsImpl implements Tkv {
 	 * @throws IOException
 	 */
 	private byte[] getValue(Meta meta) throws IOException {
-		return getDataStore().get(meta.getOffset(), meta.getLength());
+		return this.dataStore.get(meta.getOffset(), meta.getLength());
 	}
 
 	private List<Meta> metas = new ArrayList<Meta>();
@@ -185,7 +188,7 @@ public class HdfsImpl implements Tkv {
 				}
 			}
 			for (Meta meta : metas) {
-				this.getIndexStore().append(meta);
+				this.indexStore.append(meta);
 			}
 			this.metas.clear();
 		} finally {
@@ -209,11 +212,11 @@ public class HdfsImpl implements Tkv {
 	public boolean put(String key, byte[] value, String... tagNames) throws IOException {
 		try {
 			this.writeLock.lock();
-			if (this.getIndexStore().getIndex(key) != null) {
+			if (this.indexStore.getIndex(key) != null) {
 				return false; // this key already exists
 			}
-			long offset = this.getDataStore().length();
-			this.getDataStore().append(value);
+			long offset = this.dataStore.length();
+			this.dataStore.append(value);
 			Meta meta = new Meta();
 			meta.setKey(key);
 			meta.setOffset(offset);
@@ -237,7 +240,7 @@ public class HdfsImpl implements Tkv {
 	 */
 	@Override
 	public long size() throws IOException {
-		return this.getIndexStore().size();
+		return this.indexStore.size();
 	}
 
 	public void startWrite() throws IOException {
@@ -271,13 +274,13 @@ public class HdfsImpl implements Tkv {
 		boolean indexDeleted = this.indexStore.delete();
 		return dataDeleted && indexDeleted;
 	}
-	
+
 	public boolean deleteLocal() throws IOException {
 		boolean dataDeleted = this.dataStore.deleteLocal();
 		boolean indexDeleted = this.indexStore.deleteLocal();
 		return dataDeleted && indexDeleted;
 	}
-	
+
 	public boolean deleteRemote() throws IOException {
 		boolean dataDeleted = this.dataStore.deleteRemote();
 		boolean indexDeleted = this.indexStore.deleteRemote();

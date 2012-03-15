@@ -4,10 +4,15 @@
 package tkv;
 
 import java.io.File;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.Assert;
 
 import tkv.Meta;
 import tkv.Tag;
-
 
 /**
  * @author sean.wang
@@ -15,13 +20,33 @@ import tkv.Tag;
  */
 public abstract class StoreTestHelper {
 
-	protected File localDir = new File(System.getProperty("user.dir") + "/target/local/");
+	protected File localDir = new File(System.getProperty("user.dir") + "/target/hdfstmp/");
 
 	protected File localHdfsDir = new File(System.getProperty("user.dir") + "/target/hdfs/");
 
 	protected File localIndexFile = new File(localDir, "a.index");
 
 	protected File localDataFile = new File(localDir, "a.data");
+
+	protected final static int threadNum = 10;// notice: max 9, for creating asc order id bellow
+
+	protected final static int timesPerThread = 1000; // notice: must be powers 10, fro creating asc order id bellow
+
+	protected final static int TagLength = 128;
+
+	protected final static int KeyLength = 32;
+
+	protected void print(final int fails, final long start, final long size) {
+		System.out.println(new Throwable().getStackTrace()[1].toString() + " threads:" + threadNum + " total:" + threadNum * timesPerThread + " fails:" + fails + " waste:" + (System.currentTimeMillis() - start) + "ms");
+		if (fails > 0) {
+			Assert.fail("fails:" + fails);
+		}
+		Assert.assertEquals(threadNum * timesPerThread, size);
+	}
+
+	protected void print(final long start, final long size) {
+		System.out.println(new Throwable().getStackTrace()[1].toString() + " threads:" + threadNum + " total:" + threadNum * timesPerThread + " waste:" + (System.currentTimeMillis() - start) + "ms");
+	}
 
 	/**
 	 * <pre>
@@ -31,7 +56,7 @@ public abstract class StoreTestHelper {
 	 * 
 	 * @return
 	 */
-	public Meta getMeta1() {
+	protected Meta getMeta1() {
 		final Meta meta1 = new Meta();
 		meta1.setKey("12345678");
 		meta1.setOffset(0);
@@ -48,7 +73,7 @@ public abstract class StoreTestHelper {
 		return meta1;
 	}
 
-	public Meta getMeta2() {
+	protected Meta getMeta2() {
 		final Meta meta2 = new Meta();
 		meta2.setKey("87654321");
 		meta2.setOffset(10);
@@ -59,5 +84,25 @@ public abstract class StoreTestHelper {
 		t3.setPrevious(0);
 		meta2.addTag(t3);
 		return meta2;
+	}
+
+	protected void resetSerial(final AtomicInteger serial) {
+		serial.set(10 * timesPerThread);
+	}
+
+	protected AtomicInteger createSerial() {
+		return new AtomicInteger(10 * timesPerThread);
+	}
+
+	final ExecutorService pool = Executors.newFixedThreadPool(threadNum);
+
+	protected void submit(Runnable run) {
+		for (int p = 0; p < threadNum; p++) {
+			pool.submit(run);
+		}
+	}
+
+	protected CountDownLatch createLatch() {
+		return new CountDownLatch(threadNum);
 	}
 }

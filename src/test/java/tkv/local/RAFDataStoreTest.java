@@ -1,4 +1,4 @@
-package tkv;
+package tkv.local;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,13 +12,11 @@ import org.junit.Test;
 
 import tkv.DataStore;
 import tkv.LocalImpl;
-import tkv.RAFDataStore;
 
 
 public class RAFDataStoreTest {
 	File dbFile;
 	LocalImpl tkv;
-	private RAFDataStore store;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -32,14 +30,12 @@ public class RAFDataStoreTest {
 	public void setUp() throws Exception {
 		dbFile = new File("/tmp/tkvtest.db");
 		tkv = new LocalImpl(dbFile);
-		store = (RAFDataStore) tkv.getStore();
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		store.close();
 		tkv.close();
-		dbFile.delete();
+		tkv.delete();
 	}
 
 	@Test

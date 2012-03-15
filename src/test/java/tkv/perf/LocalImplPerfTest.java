@@ -1,7 +1,7 @@
 /**
  * 
  */
-package tkv;
+package tkv.perf;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +14,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import tkv.LocalImpl;
-
 
 /**
  * @author sean.wang
@@ -56,7 +55,7 @@ public class LocalImplPerfTest {
 	@After
 	public void tearDown() throws Exception {
 		fkv.close();
-		dbFile.delete();
+		fkv.delete();
 	}
 
 	private int perfTimes = 100000;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package tkv;
+package tkv.hdfs;
 
 import java.io.IOException;
 
@@ -9,6 +9,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import tkv.DataStore;
 
 /**
  * @author sean.wang
@@ -41,8 +43,10 @@ public class HdfsDataStore implements DataStore {
 	 */
 	@Override
 	public void append(byte b) throws IOException {
-		this.output.write(b);
-		this.length++;
+		synchronized (this.output) {
+			this.output.write(b);
+			this.length++;
+		}
 	}
 
 	/*
@@ -52,13 +56,15 @@ public class HdfsDataStore implements DataStore {
 	 */
 	@Override
 	public void append(byte[] bytes) throws IOException {
-		this.output.write(bytes);
-		this.length += bytes.length;
+		synchronized (this.output) {
+			this.output.write(bytes);
+			this.length += bytes.length;
+		}
 	}
 
 	@Override
 	public void append(long offset, byte[] bytes) throws IOException {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Hdfs unsupport random write!");
 	}
 
 	/*
@@ -77,7 +83,7 @@ public class HdfsDataStore implements DataStore {
 	 * @throws IOException
 	 */
 	private void closeFlieSystem() throws IOException {
-		if (this.fs == null) {
+		if (this.fs != null) {
 			this.fs.close();
 			this.fs = null;
 		}
@@ -128,8 +134,13 @@ public class HdfsDataStore implements DataStore {
 			throw new IllegalStateException("input can't null");
 		}
 		byte[] bytes = new byte[length];
-		in.seek(offset);
-		in.read(bytes);
+		synchronized (in) {
+			in.seek(offset);
+			int actual = in.read(bytes);
+			if (actual != length) {
+				throw new IOException(String.format("readed bytes expect %s actual %s", length, actual));
+			}
+		}
 		return bytes;
 	}
 

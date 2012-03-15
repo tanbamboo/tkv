@@ -11,15 +11,23 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import tkv.HdfsImpl;
+import tkv.Meta;
+import tkv.hdfs.HdfsHelper;
+
 /**
  * @author sean.wang
  * @since Mar 7, 2012
  */
 public class HdfsImplTest extends StoreTestHelper {
+	private HdfsImpl hdfs;
+
 	@Before
 	public void tearUp() throws Exception {
 		this.localIndexFile.delete();
 		this.localDataFile.delete();
+		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
+		hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
 	}
 
 	/**
@@ -27,14 +35,12 @@ public class HdfsImplTest extends StoreTestHelper {
 	 */
 	@After
 	public void tearDown() throws Exception {
-		this.localIndexFile.delete();
-		this.localDataFile.delete();
+		hdfs.close();
+		hdfs.delete();
 	}
 
 	@Test
 	public void testPutAndGetWithoutTag() throws IOException {
-		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
-		final HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
 		Meta m1 = super.getMeta1();
 		String value1 = "1234";
 		hdfs.startWrite();
@@ -44,15 +50,10 @@ public class HdfsImplTest extends StoreTestHelper {
 		hdfs.startRead();
 		Assert.assertEquals(value1, new String(hdfs.get(m1.getKey())));
 		hdfs.endRead();
-		hdfs.close();
-		hdfs.delete();
 	}
 
 	@Test
 	public void testPutAndGetWithTag() throws IOException {
-		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
-		HdfsImpl hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
-
 		hdfs.startWrite();
 		// keys must asc order for offset calculation bellow!
 		final String key1 = "12345678901234567890123456789010";
@@ -71,7 +72,6 @@ public class HdfsImplTest extends StoreTestHelper {
 		hdfs.endWrite();
 		hdfs.startRead();
 
-		Assert.assertNull(hdfs.get("notexistkey"));
 		Assert.assertEquals(value1, new String(hdfs.get(key1)));
 		Assert.assertEquals(value1, new String(hdfs.get(key1, tagName1)));
 		Assert.assertEquals(value2, new String(hdfs.get(key2)));
@@ -80,15 +80,20 @@ public class HdfsImplTest extends StoreTestHelper {
 		Assert.assertNull("key3 not tagged", hdfs.get(key3, tagName1));
 		Assert.assertEquals("key2 is next key1 with the same tag", value2, new String(hdfs.getNext(key1, tagName1)));
 		Assert.assertEquals("key1 is previous key2 with the same tag", value1, new String(hdfs.getPrevious(key2, tagName1)));
-
-		hdfs.close();
-
-		hdfs = new HdfsImpl(localHdfsDir, super.localDir, localIndexFile.getName(), localDataFile.getName(), 64, 100);
-		hdfs.startRead();
-		Assert.assertEquals(value1, new String(hdfs.get(key1)));
-		Assert.assertEquals(value1, new String(hdfs.get(key1, tagName1)));
-
-		hdfs.delete();
 	}
 
+	@Test
+	public void testGetNotExistsKey() throws IOException {
+		hdfs.startWrite();
+		final String key1 = "12345678901234567890123456789010";
+		final String value1 = "It's A.";
+		final String tagName1 = "t1";
+
+		hdfs.put(key1, value1.getBytes(), tagName1);
+		hdfs.buildIndex();
+		hdfs.endWrite();
+		hdfs.startRead();
+
+		Assert.assertNull(hdfs.get("notexistkey"));
+	}
 }

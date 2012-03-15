@@ -1,11 +1,15 @@
 /**
  * 
  */
-package tkv;
+package tkv.local;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -13,6 +17,9 @@ import java.util.Map;
 
 import org.apache.commons.lang.ArrayUtils;
 
+import tkv.IndexStore;
+import tkv.Meta;
+import tkv.Tag;
 import tkv.util.ArrayKit;
 import tkv.util.NumberKit;
 
@@ -35,6 +42,8 @@ public class RAFIndexStore implements IndexStore {
 
 	private File storeFile;
 
+	private long length;
+
 	private final static int OFFSET_LEN = 4;
 
 	private final static int LENGTH_LEN = 4;
@@ -53,13 +62,14 @@ public class RAFIndexStore implements IndexStore {
 		return fixed;
 	}
 
-	public RAFIndexStore(File storeFile, int keyLength, int tagLength) throws FileNotFoundException {
+	public RAFIndexStore(File storeFile, int keyLength, int tagLength) throws IOException {
 		this.keyLength = keyLength;
 		this.tagLength = tagLength;
 		this.indexLength = this.keyLength + OFFSET_LEN + LENGTH_LEN + tagLength;
 		this.storeFile = storeFile;
 		writeRAF = new RandomAccessFile(storeFile, "rw");
 		readRAF = new RandomAccessFile(storeFile, "r");
+		this.length = this.readRAF.length();
 	}
 
 	@Override
@@ -95,19 +105,20 @@ public class RAFIndexStore implements IndexStore {
 			buf[i] = TAG_SPLITER;
 		}
 		synchronized (this.writeRAF) {
-			this.writeRAF.seek(writeRAF.length());
+			this.writeRAF.seek(this.length);
 			this.writeRAF.write(buf);
+			this.length += buf.length;
 		}
 	}
 
-	private int binarySearchPos(String key, Comparator<byte[]> keyComp) throws IOException {
-		int low = 0;
+	private long binarySearchPos(String key, Comparator<byte[]> keyComp) throws IOException {
+		long low = 0;
 		int indexLength = this.indexLength;
 		int keyLength = this.keyLength;
-		int high = (int) this.readRAF.length() / indexLength;
+		long high = (int) this.length / indexLength - 1;
 
 		while (low <= high) {
-			int mid = (low + high) >>> 1;
+			long mid = (low + high) >>> 1;
 			byte[] midVal = this.getBytes(mid * indexLength, keyLength);
 			int cmp = keyComp.compare(midVal, toFixedKey(key));
 
@@ -136,10 +147,13 @@ public class RAFIndexStore implements IndexStore {
 		}
 	}
 
-	private byte[] getBytes(long pos, int size) throws IOException {
-		byte[] bytes = new byte[size];
-		readRAF.seek(pos);
-		readRAF.read(bytes);
+	private byte[] getBytes(long offset, int length) throws IOException {
+		byte[] bytes = new byte[length];
+		readRAF.seek(offset);
+		int actual = readRAF.read(bytes);
+		if (actual != length) {
+			throw new IOException(String.format("readed bytes expect %s actual %s", length, actual));
+		}
 		return bytes;
 	}
 
@@ -149,10 +163,8 @@ public class RAFIndexStore implements IndexStore {
 	 * @see com.dianping.cat.storage.hdfs.hdfs.IndexStore#getIndex(int)
 	 */
 	@Override
-	public Meta getIndex(int indexPos) throws IOException {
-		this.readRAF.seek(indexPos * this.indexLength);
-		byte[] bytes = new byte[this.indexLength];
-		this.readRAF.read(bytes);
+	public Meta getIndex(long indexPos) throws IOException {
+		byte[] bytes = this.getBytes(1L * indexPos * this.indexLength, this.indexLength);
 		return deserialMeta(bytes);
 	}
 
@@ -220,8 +232,11 @@ public class RAFIndexStore implements IndexStore {
 	 */
 	@Override
 	public Meta getIndex(String key, Comparator<byte[]> keyComp) throws IOException {
+		if (this.size() == 0) {
+			return null;
+		}
 		synchronized (this.readRAF) {
-			int pos = this.binarySearchPos(key, keyComp);
+			long pos = this.binarySearchPos(key, keyComp);
 			if (pos < 0) {
 				return null;
 			}
@@ -254,7 +269,7 @@ public class RAFIndexStore implements IndexStore {
 	 */
 	@Override
 	public long size() throws IOException {
-		return this.length() / this.indexLength;
+		return this.length / this.indexLength;
 	}
 
 	@Override
@@ -264,7 +279,7 @@ public class RAFIndexStore implements IndexStore {
 
 	@Override
 	public long length() throws IOException {
-		return this.readRAF.length();
+		return this.length;
 	}
 
 	@Override
@@ -274,6 +289,15 @@ public class RAFIndexStore implements IndexStore {
 
 	@Override
 	public void flush() throws IOException {
+		this.writeRAF.getChannel().force(false);
+	}
+
+	public InputStream getInputStream() throws FileNotFoundException {
+		return new FileInputStream(storeFile);
+	}
+
+	public OutputStream getOutputStream() throws FileNotFoundException {
+		return new FileOutputStream(storeFile);
 	}
 
 }

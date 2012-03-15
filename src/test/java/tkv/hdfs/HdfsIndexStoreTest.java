@@ -1,7 +1,7 @@
 /**
  * 
  */
-package tkv;
+package tkv.hdfs;
 
 import java.io.IOException;
 
@@ -9,14 +9,11 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import tkv.HdfsHelper;
-import tkv.HdfsIndexStore;
 import tkv.Meta;
+import tkv.StoreTestHelper;
 
 
 /**
@@ -26,32 +23,12 @@ import tkv.Meta;
 public class HdfsIndexStoreTest extends StoreTestHelper {
 	private HdfsIndexStore indexStore;
 
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-	}
-
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-	}
-
-	/**
-	 * @throws java.lang.Exception
-	 */
 	@Before
 	public void setUp() throws Exception {
 		FileSystem localHdfsDir = HdfsHelper.createLocalFileSystem(super.localHdfsDir.getAbsolutePath());
 		indexStore = new HdfsIndexStore(localHdfsDir, localIndexFile.getName(), localIndexFile, 64, 100);
 	}
 
-	/**
-	 * @throws java.lang.Exception
-	 */
 	@After
 	public void tearDown() throws Exception {
 		indexStore.close();

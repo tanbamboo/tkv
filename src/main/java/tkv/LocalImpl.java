@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import tkv.local.RAFDataStore;
 import tkv.util.StringKit;
 
 

@@ -1,11 +1,13 @@
 /**
  * 
  */
-package tkv;
+package tkv.local;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+
+import tkv.DataStore;
 
 
 /**
@@ -50,10 +52,13 @@ public class RAFDataStore implements DataStore {
 	}
 
 	@Override
-	public byte[] get(long pos, int size) throws IOException {
-		byte[] bytes = new byte[size];
-		readRAF.seek(pos);
-		readRAF.read(bytes);
+	public byte[] get(long offset, int length) throws IOException {
+		byte[] bytes = new byte[length];
+		readRAF.seek(offset);
+		int actual = readRAF.read(bytes);
+		if(actual != length) {
+			throw new IOException(String.format("readed bytes expect %s actual %s", length, actual));
+		}
 		return bytes;
 	}
 

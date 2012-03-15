@@ -1,7 +1,7 @@
 /**
  * 
  */
-package tkv;
+package tkv.local;
 
 import java.io.IOException;
 
@@ -14,7 +14,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import tkv.Meta;
-import tkv.RAFIndexStore;
+import tkv.StoreTestHelper;
 
 
 /**
@@ -53,7 +53,7 @@ public class RAFIndexStoreTest extends StoreTestHelper {
 	@After
 	public void tearDown() throws Exception {
 		indexStore.close();
-		localIndexFile.delete();
+		indexStore.delete();
 	}
 
 	@Test
