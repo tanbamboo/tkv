@@ -96,7 +96,7 @@ public class HdfsIndexStorePerfTest extends StoreTestHelper {
 			}
 		});
 		latch.await();
-		print(fail.get(), start);
+		printFails(fail.get(), start, indexStore.size());
 	}
 
 	@Test
@@ -124,7 +124,7 @@ public class HdfsIndexStorePerfTest extends StoreTestHelper {
 			}
 		});
 		latch.await();
-		print(fail.get(), start, indexStore.size());
+		printFails(fail.get(), start, indexStore.size());
 		this.resetSerial(serial);
 		this.serialRead(serial);
 	}
@@ -155,18 +155,17 @@ public class HdfsIndexStorePerfTest extends StoreTestHelper {
 			}
 		});
 		latch.await();
-		print(fail.get(), start);
+		printFails(fail.get(), start, indexStore.size());
 	}
 
 	@Test
 	public void testSerialRead() throws Exception {
 		final AtomicInteger serial = createSerial();
-		final AtomicInteger fail = new AtomicInteger();
 		serialWrite(serial);
 		resetSerial(serial);
 		long start = System.currentTimeMillis();
 		serialRead(serial);
-		print(fail.get(), start);
+		print(start, indexStore.size());
 	}
 
 	protected void serialRead(final AtomicInteger serial) throws IOException {
@@ -182,7 +181,6 @@ public class HdfsIndexStorePerfTest extends StoreTestHelper {
 	@Test
 	public void testSerialReadWithTag() throws Exception {
 		final AtomicInteger serial = createSerial();
-		final AtomicInteger fail = new AtomicInteger();
 		String tagName = serialWriteWithTag(serial);
 		resetSerial(serial);
 		long start = System.currentTimeMillis();
@@ -193,7 +191,7 @@ public class HdfsIndexStorePerfTest extends StoreTestHelper {
 				Assert.assertEquals(id, meta.getKey());
 			}
 		}
-		print(fail.get(), start);
+		print(start, indexStore.size());
 	}
 
 	@Test

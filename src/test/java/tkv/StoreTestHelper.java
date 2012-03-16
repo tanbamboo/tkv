@@ -36,7 +36,7 @@ public abstract class StoreTestHelper {
 
 	protected final static int KeyLength = 32;
 
-	protected void print(final int fails, final long start, final long size) {
+	protected void printFails(final int fails, final long start, final long size) {
 		System.out.println(new Throwable().getStackTrace()[1].toString() + " threads:" + threadNum + " total:" + threadNum * timesPerThread + " fails:" + fails + " waste:" + (System.currentTimeMillis() - start) + "ms");
 		if (fails > 0) {
 			Assert.fail("fails:" + fails);
@@ -46,6 +46,7 @@ public abstract class StoreTestHelper {
 
 	protected void print(final long start, final long size) {
 		System.out.println(new Throwable().getStackTrace()[1].toString() + " threads:" + threadNum + " total:" + threadNum * timesPerThread + " waste:" + (System.currentTimeMillis() - start) + "ms");
+		Assert.assertEquals(threadNum * timesPerThread, size);
 	}
 
 	/**

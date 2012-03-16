@@ -65,9 +65,6 @@ public class HdfsImplPerfTest extends StoreTestHelper {
 		final CountDownLatch latch = createLatch();
 		this.serialWrite(serial);
 		resetSerial(serial);
-//		this.serialRead(serial);
-//		resetSerial(serial);
-		//Thread.sleep(10000);
 		long start = System.currentTimeMillis();
 		submit(new Runnable() {
 			public void run() {
@@ -89,7 +86,7 @@ public class HdfsImplPerfTest extends StoreTestHelper {
 			}
 		});
 		latch.await();
-		print(fail.get(), start);
+		printFails(fail.get(), start, hdfs.size());
 	}
 
 	@Test
@@ -118,7 +115,7 @@ public class HdfsImplPerfTest extends StoreTestHelper {
 		});
 		latch.await();
 		hdfs.buildIndex();
-		print(fail.get(), start);
+		printFails(fail.get(), start, hdfs.size());
 
 		resetSerial(serial);
 		hdfs.endWrite();
